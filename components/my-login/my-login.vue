@@ -8,9 +8,7 @@
 </template>
 
 <script>
-  import {
-    mapMutations
-  } from 'vuex'
+  import {mapMutations, mapState} from 'vuex'
 
   export default {
     name: "my-login",
@@ -19,8 +17,11 @@
 
       };
     },
+    computed: {
+      ...mapState('m_user',['redirectInfo'])
+    },
     methods: {
-      ...mapMutations('m_user', ['updateUserInfo']),
+      ...mapMutations('m_user', ['updateUserInfo','updateToken','updateRedirectInfo']),
 
       //用户授权之后，获取用户的基本信息
       getUserProfile(e) {
@@ -28,7 +29,7 @@
           // consle.log(e)
           desc: '你的授权信息',
           success: (res) => {
-            console.log(res)
+            // console.log(res)
             this.updateUserInfo(res.userInfo)
             this.getToken(res)
           },
@@ -49,7 +50,7 @@
           code: res.code,
           encryptedData: info.encryptedData,
           iv: info.iv,
-          rawData: info.rawData,
+          userInfo: info.userInfo,
           signature: info.signature
         }
         // console.log(query)
@@ -59,9 +60,10 @@
         this.loginrequest(query)
       },
       async loginrequest(query) {
-        console.log(query)
+        // console.log(query)
         let result=await uni.request({
-        			url:'https://weixin.kinkrit.com/api/test',
+        			// url:'https://weixin.kinkrit.com/api/login',
+              url:'http://127.0.0.1:8000/api/login',
               method: 'POST',
               data: query
         		});
@@ -69,12 +71,26 @@
         		let [error,res]=result;  //ES6对数组的解构
             console.log(res)
         		if(res.data.code === 200){
+              //保存token
+              this.updateToken(res.data.data.token)
+              this.navigateBack()
         			// this.carouselData=res.data;
-              console.log('调用接口成功')
+              // console.log('调用接口成功')
         		}
-        		if(res.data.code===404){
-        			console.log('找不到接口资源');
+        		if(res.data.code === 100){
+              return uni.$showMsg('登录失败！')
+        			// console.log('找不到接口资源');
         		}
+      },
+      navigateBack() {
+        if(this.redirectInfo && this.redirectInfo.openType === 'switchTab') {
+          uni.switchTab({
+            url: this.redirectInfo.from,
+            complete: () => {
+              this.updateRedirectInfo(null)
+            }
+          })
+        }
       }
     }
   }
